@@ -249,6 +249,10 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
       for (const input of [JSON.stringify({ toolName: "task", toolArgs: { agent_type: "other:agent", model: "not-saved" } }), "not json"]) {
         expect(sameAsPosix(input)).toBe("");
       }
+      // Copilot on Windows sends backslash paths; the wrapper rewrites them so the view rule still applies.
+      const windowsPath = join(fixture.plugin, "hooks", "copilot-hooks.json").replaceAll("/", "\\");
+      const windowsView = runWindows(JSON.stringify({ toolName: "view", toolArgs: { path: windowsPath }, cwd: fixture.home }));
+      expect({ status: windowsView.status, out: windowsView.out.toString("utf8") }).toEqual({ status: 0, out: '{"permissionDecision":"allow"}\n' });
       const noGit = runWindows(JSON.stringify({ toolName: "view", toolArgs: { path: pluginPath } }), true);
       expect({ status: noGit.status, out: noGit.out.toString("utf8"), err: noGit.err }).toEqual({ status: 0, out: "", err: "" });
     });

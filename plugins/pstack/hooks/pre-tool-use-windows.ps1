@@ -9,6 +9,22 @@ function ConvertTo-PosixPath([string] $Path) {
   return $null
 }
 
+# The POSIX rules compare forward-slash paths and reject a backslash, so the Windows
+# paths Copilot sends in cwd and the view path are rewritten to the /c/x form the
+# plugin root uses. Anything that is not JSON passes through for the hook to reject.
+function Convert-PayloadPaths([string] $Text) {
+  try { $data = $Text | ConvertFrom-Json } catch { return $Text }
+  if ($null -eq $data) { return $Text }
+  if ($data.cwd -is [string] -and (ConvertTo-PosixPath $data.cwd)) { $data.cwd = ConvertTo-PosixPath $data.cwd }
+  foreach ($name in @("toolArgs", "tool_input")) {
+    $toolArgs = $data.$name
+    if ($toolArgs -and $toolArgs.path -is [string] -and (ConvertTo-PosixPath $toolArgs.path)) {
+      $toolArgs.path = ConvertTo-PosixPath $toolArgs.path
+    }
+  }
+  return ($data | ConvertTo-Json -Compress -Depth 32)
+}
+
 function Quote-ProcessArgument([string] $Value) {
   return '"' + $Value + '"'
 }
@@ -49,10 +65,11 @@ try {
 
   $pluginRoot = ConvertTo-PosixPath $env:COPILOT_PLUGIN_ROOT
   if (-not $pluginRoot) { exit 0 }
-  $home = $env:HOME
-  if ($env:COPILOT_HOME) { $home = $env:COPILOT_HOME }
-  if ($home) {
-    $posixHome = ConvertTo-PosixPath $home
+  # $HOME is a read-only automatic variable, so the Copilot home gets its own name.
+  $copilotHome = $env:HOME
+  if ($env:COPILOT_HOME) { $copilotHome = $env:COPILOT_HOME }
+  if ($copilotHome) {
+    $posixHome = ConvertTo-PosixPath $copilotHome
     if (-not $posixHome) { exit 0 }
   }
 
@@ -77,8 +94,9 @@ try {
   $stderr = New-Object System.IO.MemoryStream
   $outTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
   $errTask = $process.StandardError.BaseStream.CopyToAsync($stderr)
-  $stdinStream = [Console]::OpenStandardInput()
-  $stdinStream.CopyTo($process.StandardInput.BaseStream)
+  $payload = Convert-PayloadPaths ((New-Object System.IO.StreamReader([Console]::OpenStandardInput(), (New-Object System.Text.UTF8Encoding($false)))).ReadToEnd())
+  $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($payload)
+  $process.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
   $process.StandardInput.Close()
   if (-not $process.WaitForExit(8000)) {
     $process.Kill()
