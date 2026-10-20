@@ -239,7 +239,7 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
         const expected = runPosix(fixture, input);
         const actual = runWindows(input);
         expect({ status: expected.status, statusWindows: actual.status, err: actual.err }).toEqual({ status: 0, statusWindows: 0, err: "" });
-        expect(actual.out.equals(expected.out)).toBe(true);
+        expect(actual.out.toString("utf8")).toBe(expected.out.toString("utf8"));
         return actual.out.toString("utf8");
       };
       const pluginPath = forwardSlashes(join(fixture.plugin, "hooks/copilot-hooks.json"));
