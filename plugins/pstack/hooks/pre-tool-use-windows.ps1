@@ -2,15 +2,17 @@
 # through Git for Windows so its awk rules stay identical on both platforms.
 # Every failure stays silent and exits 0 because Copilot denies non-zero hooks.
 
+# C:\x becomes C:/x: Git for Windows' sh and awk open that form, and it is the form the
+# POSIX hook itself receives, so both sides quote the same paths in their messages.
 function ConvertTo-PosixPath([string] $Path) {
   if ($Path -match '^([A-Za-z]):[\\/](.*)$') {
-    return '/' + $Matches[1].ToLowerInvariant() + '/' + $Matches[2].Replace('\', '/')
+    return $Matches[1] + ':/' + $Matches[2].Replace('\', '/')
   }
   return $null
 }
 
 # The POSIX rules compare forward-slash paths and reject a backslash, so the Windows
-# paths Copilot sends in cwd and the view path are rewritten to the /c/x form the
+# paths Copilot sends in cwd and the view path are rewritten to the C:/x form the
 # plugin root uses. Anything that is not JSON passes through for the hook to reject.
 function Convert-PayloadPaths([string] $Text) {
   try { $data = $Text | ConvertFrom-Json } catch { return $Text }
