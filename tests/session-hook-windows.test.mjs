@@ -166,7 +166,7 @@ const gitRoot = (() => {
 })();
 
 // The POSIX hook, run as the `bash` command on macOS and Linux.
-function runPosix({ plugin, home }, input) {
+function runPosix({ plugin, home }, input, command = copilotStart.bash) {
   if (!gitRoot) throw new Error("Git for Windows (bin/sh.exe and usr/bin/iconv.exe) is needed for the POSIX side");
   const env = {
     PATH: [join(gitRoot, "usr", "bin"), join(gitRoot, "bin")].join(delimiter),
@@ -174,7 +174,7 @@ function runPosix({ plugin, home }, input) {
     COPILOT_PLUGIN_ROOT: forwardSlashes(plugin),
     COPILOT_HOME: forwardSlashes(home),
   };
-  const r = spawnSync(join(gitRoot, "bin", "sh.exe"), ["-c", copilotStart.bash], { env, input });
+  const r = spawnSync(join(gitRoot, "bin", "sh.exe"), ["-c", command], { env, input });
   if (r.error) throw r.error;
   return { status: r.status, out: r.stdout, err: r.stderr.toString("utf8") };
 }
@@ -236,7 +236,7 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
         return { status: r.status, out: r.stdout, err: r.stderr.toString("utf8") };
       };
       const sameAsPosix = (input) => {
-        const expected = runPosix(fixture, input);
+        const expected = runPosix(fixture, input, copilotPreToolUse.bash);
         const actual = runWindows(input);
         expect({ status: expected.status, statusWindows: actual.status, err: actual.err }).toEqual({ status: 0, statusWindows: 0, err: "" });
         expect(actual.out.toString("utf8")).toBe(expected.out.toString("utf8"));
