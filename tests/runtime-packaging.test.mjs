@@ -105,7 +105,7 @@ describe("manifests", () => {
   test("T3 has no manifest row and leaves every native host manifest registered", () => {
     const t3 = RUNTIMES.find((runtime) => runtime.name === "T3 Code");
     expect(t3?.manifest).toBeUndefined();
-    expect(RUNTIMES.filter((runtime) => runtime.manifest).map((runtime) => runtime.name)).toEqual(["Codex", "Pi", "GitHub Copilot", "OpenCode"]);
+    expect(RUNTIMES.filter((runtime) => runtime.manifest).map((runtime) => runtime.name)).toEqual(["Codex", "Pi", "GitHub Copilot", "Muse", "OpenCode"]);
     for (const runtime of RUNTIMES.filter((candidate) => candidate.manifest)) {
       expect(existsSync(join(repoRoot, runtime.manifest))).toBe(true);
     }

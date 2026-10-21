@@ -27,7 +27,7 @@ Inside T3 Code, [t3-tools.md](t3-tools.md) takes precedence for dispatch, models
 | Track tasks (`TaskCreate`, `TaskUpdate`, or `TodoWrite`) | Keep the uncommitted `todo.md` checklist poteto-mode describes. This build assumes no task-tracking tool. |
 | Ask the human a fixed-choice question (`AskUserQuestion`) | `question`, when the client supports interactive questions. Otherwise ask in plain text and wait. |
 | Schedule a self-paced re-invocation (`ScheduleWakeup`), or the `loop` skill | No equivalent. Re-check by hand. |
-| Read this workspace's session transcripts (Claude Code's `~/.claude/projects/`) | Not available. Export the session with `opencode session export <session>` and read the export. Do not read OpenCode's database files directly. |
+| Read this workspace's session transcripts (Claude Code's `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`) | Not available. Export the session with `opencode session export <session>` and read the export. Do not read OpenCode's database files directly. |
 | Isolate a writer in its own git worktree (`isolation: "worktree"`) | Create the worktree with `git worktree add` through `bash`, and give the subagent its path in the prompt. |
 
 ## Subagent policy
@@ -35,11 +35,11 @@ Inside T3 Code, [t3-tools.md](t3-tools.md) takes precedence for dispatch, models
 poteto-mode's [Subagents](../SKILL.md#subagents) section applies on OpenCode through the `subagent` tool, with these changes:
 
 - The `subagent` tool has no `subagent_type` field. It takes an agent ID, and each pstack profile is installed under the ID in its file name:
-  - `pstack:poteto-agent`, `general-purpose`, and no type map to `pstack-agent`. So do `pstack:poteto-agent-<level>` and `pstack:effort-<level>`, because OpenCode has no effort agents.
+  - `pstack:poteto-agent`, `general-purpose`, and no type map to `pstack-agent`.
   - `pstack:comment-sicko` maps to `pstack-comment-sicko`.
   - Read-only work maps to `pstack-reviewer`. That covers `readonly: true`, the read-only panels in `how` and `interrogate`, and the `Explore` and `Plan` types. The profile denies edits and shell commands.
 - The `subagent` tool has no per-call `model` field. A subagent runs on the session's model unless its profile names one. See Model names.
-- A `@<level>` suffix on a role has no effect on OpenCode. The session's effort applies.
+- A `@<level>` suffix maps to the dispatch effort field on supported runtimes. OpenCode's `subagent` tool has no per-call effort field, so the session's effort applies.
 - `run_in_background: true` maps to `background: true` on the `subagent` call.
 - `pstack-agent` is the worker profile. Its permissions deny the `subagent` tool, so a worker cannot start more agents. The two read-only profiles deny every action their permission list does not allow. Use `pstack-agent` for work that needs other tools, such as MCP servers.
 - Give each writing subagent its own worktree, created as Tool actions describes, or an output directory of its own.
@@ -87,8 +87,8 @@ Most skills need only the tables above. These need one more mapping:
 | `arena` | The candidates run as background `pstack-agent` calls, each in its own worktree. The cross-judge runs as `pstack-reviewer` calls. |
 | `architect` | Its runner panel goes through `arena`, so the `arena` row applies. |
 | `swarm` | Each worker is a background `pstack-agent` call. Each writing worker gets its own worktree or output directory. |
-| `reflect` | The three reviewers take `pstack-reviewer`, and the synthesizer takes `pstack-agent`. The transcript finder reads the session export in Tool actions, not `~/.claude/projects/`. |
-| `recall` | Search the session export, not `~/.claude/projects/`. That directory holds Claude Code transcripts, not this session's history. |
+| `reflect` | The three reviewers take `pstack-reviewer`, and the synthesizer takes `pstack-agent`. The transcript finder reads the session export in Tool actions, not `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`. |
+| `recall` | Search the session export, not `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`. That directory holds Claude Code transcripts, not this session's history. |
 | `show-me-your-work` | Check the log against the session export, not a Claude Code transcript. |
 | `teach` | Running `how` and `why` in parallel maps to two background `subagent` calls. This build has no image generation tool, so draw with Mermaid or plain text. |
 | `no-comments` | `pstack:comment-sicko` maps to `pstack-comment-sicko`. Pass it the scope, and do not ask it to run `/no-comments`. Run it without a worktree, because a worktree starts from `HEAD` and lacks the scope's uncommitted changes. |
@@ -96,7 +96,7 @@ Most skills need only the tables above. These need one more mapping:
 | `babysit` | `loop` has no equivalent, so re-check by hand. `AskUserQuestion` maps to `question`. |
 | `create-verification-skill` | Write the generated skill to `.opencode/skills/verify/`, not `.claude/skills/verify/`. The app-driving harness does not change. |
 | `maintain-verification-skill` | The project-local skill lives under `.opencode/skills/`. Its per-feature readers take background `subagent` calls. |
-| `automate-me` | Write the personal mode skill to `.opencode/skills/<handle>-mode/SKILL.md`. Read the session export for the workspace's history, not `~/.claude/projects/`. |
+| `automate-me` | Write the personal mode skill to `.opencode/skills/<handle>-mode/SKILL.md`. Read the session export for the workspace's history, not `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`. |
 | `benchmark-checklist` | Its named Unix tools (`uptime`, `nproc`, `pidstat`, `strace`, `py-spy`, `perf`) may be missing on Windows. Use the platform equivalent, keep the checklist's questions, and use `node --cpu-prof` as the baseline profiler. |
 | `correct` | Its rule table goes in the agent instruction file, which OpenCode reads as `AGENTS.md`. |
 | `poteto-help` | The workspace installer installs the plugin, and no plugin marketplace command applies. The model sheet does not apply, so set models on agent profiles. With the pstack plugin, every skill loads by ID with `skill`, including the principle references that the Claude Code menu hides. |
