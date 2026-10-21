@@ -213,6 +213,8 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
     );
   });
 
+  // Six Windows PowerShell 5.1 starts: slow on hosted runners, so this gets the long timeout
+  // the 5.1-and-7 comparison below uses.
   test("the PreToolUse command runs the shared hook and fails open without Git", () => {
     expect(copilotPreToolUse.powershell).toBe(
       'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:COPILOT_PLUGIN_ROOT/hooks/pre-tool-use-windows.ps1"',
@@ -256,7 +258,7 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
       const noGit = runWindows(JSON.stringify({ toolName: "view", toolArgs: { path: pluginPath } }), true);
       expect({ status: noGit.status, out: noGit.out.toString("utf8"), err: noGit.err }).toEqual({ status: 0, out: "", err: "" });
     });
-  });
+  }, 180000);
 
   for (const { name, sheet, off } of sheetCases) {
     if (hasStrayCarriageReturn(sheet)) {
