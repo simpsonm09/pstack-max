@@ -2,6 +2,10 @@
 
 This file is the release changelog, with one `## <version> - <title>` entry per release, newest first. The Cursor-to-Claude rewrite rules live in [`tools/substitutions.json`](tools/substitutions.json), and the [sync boundary](CONTRIBUTING.md#the-sync-boundary) in `CONTRIBUTING.md` defines how a change to upstream's skill content is declared.
 
+## Fork - Refresh the conditional T3 overlay
+
+Updated T3 isolation, dispatch retries, model options, child lifecycle, capability warnings, and skill routing from the t3-pstack review. The sheet checker accepts boolean options and reports provider constraints without rejecting targets. Kept native runtime behavior and workspace-first sheets.
+
 ## Fork sync - Cursor pstack 88d4751
 
 Synced Cursor pstack from `7b353f7` to `88d47514b82e7c44f00f2b2a72ff6dd12158038c` (0.15.28). Restored sharpen's original prompt-rewrite workflow and updated its poteto-help description and recipe. The sync updated two files and merged poteto-help cleanly, with 85 unchanged files, 46 untouched forks, no conflicts, and no newly port-only files. Updated the retained OpenCode mapping for dispatch effort fields and Claude configuration paths, and included Muse in the runtime packaging test's expected manifest list.

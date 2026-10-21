@@ -5,6 +5,8 @@ description: "Catch the user up on what changed in this chat since their last me
 
 # Ketchup
 
+Inside T3 Code (the live tool list has `delegate_task` and `orchestrator_capabilities`), follow [t3-tools.md](../poteto-mode/references/t3-tools.md) for dispatch, models, schedules and pull request watching. Otherwise ignore this line.
+
 Catch the user up on what changed in this chat since the last message they wrote before `/ketchup`, and help them understand each change, not only where it stands. Then lay out every call waiting on them so they can make it from your reply alone. Notifications and subagent results are not their messages. Assume the user remembers their last message and nothing after it.
 
 Use [`/bro`](../bro/SKILL.md)'s voice, not its task: plain words, short sentences, no jargon, like one person catching up another. Say what changed for the user, not how you did it. Say "the tests pass", not "CI is green". Leave out hashes, file paths, commands, build numbers, and test counts unless the user needs one to act. Call each PR, branch, or agent by a name the user would know, not by a label you invented. If a fact needs context to make sense, give the context or leave the fact out.

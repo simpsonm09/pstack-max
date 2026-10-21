@@ -8,6 +8,7 @@
           "id": "familya-main",
           "options": [
             { "id": "effort", "options": [{ "id": "low" }, { "id": "high" }] },
+            { "id": "fastMode", "type": "boolean" },
             { "id": "mode", "options": [{ "id": "safe" }] }
           ]
         },

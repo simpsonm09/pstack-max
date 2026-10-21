@@ -5,6 +5,8 @@ description: Guides users through pstack setup, /poteto-mode, and picking the sk
 
 # Poteto help
 
+Inside T3 Code (the live tool list has `delegate_task` and `orchestrator_capabilities`), follow [t3-tools.md](../poteto-mode/references/t3-tools.md) for dispatch, models, schedules and pull request watching. Otherwise ignore this line.
+
 Answer the user's question about pstack, hand them a prompt they can send, and link the file the answer came from. For a help question, don't start the work. The user asked how, and a pstack run spends real tokens, so let them send the prompt.
 
 A message that asks for work, such as "use pstack to fix this bug", is not a help question. Read [`poteto-mode`](../poteto-mode/SKILL.md) and do the work under it.
