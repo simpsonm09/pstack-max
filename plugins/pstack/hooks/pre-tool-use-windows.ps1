@@ -105,7 +105,7 @@ try {
     exit 0
   }
   [System.Threading.Tasks.Task]::WaitAll(@($outTask, $errTask), 1000) | Out-Null
-  if ($process.ExitCode -eq 0 -and $stderr.Length -eq 0 -and $outTask.IsCompleted -and $errTask.IsCompleted) {
+  if ($process.ExitCode -eq 0 -and $outTask.IsCompleted -and $errTask.IsCompleted) {
     $stdout.Position = 0
     $stdout.CopyTo([Console]::OpenStandardOutput())
   }
