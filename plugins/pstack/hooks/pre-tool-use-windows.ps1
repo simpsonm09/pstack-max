@@ -4,9 +4,6 @@
 
 # C:\x becomes C:/x: Git for Windows' sh and awk open that form, and it is the form the
 # POSIX hook itself receives, so both sides quote the same paths in their messages.
-# TEMPORARY CI DIAGNOSTICS: removed before merge.
-function Write-HookDebug([string] $Text) { if ($env:PSTACK_HOOK_DEBUG) { [Console]::Error.WriteLine("pstack-hook-debug: $Text") } }
-
 function ConvertTo-PosixPath([string] $Path) {
   if ($Path -match '^([A-Za-z]):[\\/](.*)$') {
     return $Matches[1] + ':/' + $Matches[2].Replace('\', '/')
@@ -67,7 +64,6 @@ try {
     }
     if ($sh) { break }
   }
-  Write-HookDebug "roots=$($roots -join '|') sh=$sh awkDir=$awkDir root=$env:COPILOT_PLUGIN_ROOT"
   if (-not $sh -or -not $env:COPILOT_PLUGIN_ROOT) { exit 0 }
 
   $pluginRoot = ConvertTo-PosixPath $env:COPILOT_PLUGIN_ROOT
@@ -88,8 +84,7 @@ try {
   $hookPath = ConvertTo-PosixPath (Join-Path $env:COPILOT_PLUGIN_ROOT 'hooks\pre-tool-use.sh')
   $start = New-Object System.Diagnostics.ProcessStartInfo
   $start.FileName = $sh
-  $trace = if ($env:PSTACK_HOOK_DEBUG) { '-x ' } else { '' }
-  $start.Arguments = $trace + '-c ' + (Quote-ProcessArgument 'exec "$0" < "$1"') + ' ' + (Quote-ProcessArgument $hookPath) + ' ' + (Quote-ProcessArgument (ConvertTo-PosixPath $payloadFile))
+  $start.Arguments = '-c ' + (Quote-ProcessArgument 'exec "$0" < "$1"') + ' ' + (Quote-ProcessArgument $hookPath) + ' ' + (Quote-ProcessArgument (ConvertTo-PosixPath $payloadFile))
   $start.WorkingDirectory = $env:COPILOT_PLUGIN_ROOT
   $start.UseShellExecute = $false
   $start.CreateNoWindow = $true
@@ -114,13 +109,11 @@ try {
     exit 0
   }
   [System.Threading.Tasks.Task]::WaitAll(@($outTask, $errTask), 1000) | Out-Null
-  Write-HookDebug "payload=$payload exit=$($process.ExitCode) out=$($stdout.Length) err=$([Text.Encoding]::UTF8.GetString($stderr.ToArray()))"
   if ($process.ExitCode -eq 0 -and $outTask.IsCompleted -and $errTask.IsCompleted) {
     $stdout.Position = 0
     $stdout.CopyTo([Console]::OpenStandardOutput())
   }
 } catch {
-  Write-HookDebug "error=$_"
   # Permission hooks must fail open and stay silent on all setup and runtime errors.
 } finally {
   if ($process -and -not $process.HasExited) {
