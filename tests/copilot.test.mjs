@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { loadLeadLines, loadModels, noteSkills } from "../tools/generate.mjs";
 import { RUNTIMES } from "../tools/runtimes.mjs";
 import { markdownFiles } from "../tools/validate-skills.mjs";
+import { mappingCoverage } from "./mapping-coverage.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const skillsDir = join(repoRoot, "plugins/pstack/skills");
@@ -17,8 +18,8 @@ const mapping = readFileSync(mappingPath, "utf8");
 const models = loadModels();
 
 // Claude-specific terms a skill may name, and the text copilot-tools.md must
-// carry to map each one. A term the skills stop using drops out of the check.
-const TERMS = [
+// carry to map each one.
+mappingCoverage(RUNTIMES.find((runtime) => runtime.name === "GitHub Copilot"), [
   ["AskUserQuestion", "`AskUserQuestion`"],
   ["subagent_type", "`subagent_type"],
   ["run_in_background", "`run_in_background: true`"],
@@ -32,7 +33,7 @@ const TERMS = [
   ["`loop`", "`loop`"],
   ["/loop", "`/loop`"],
   ["plugin-dev", "`plugin-dev:skill-development`"],
-  [".claude/projects", "`~/.claude/projects/"],
+  ["${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects", "`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/"],
   [".claude/skills", "`.claude/skills/`"],
   ["~/.claude/orchestrate", "`~/.claude/orchestrate/`"],
   ["CLAUDE.md", "`CLAUDE.md`"],
@@ -40,20 +41,9 @@ const TERMS = [
   ["pstack:poteto-agent", "`pstack:poteto-agent`"],
   ["pstack:comment-sicko", "`pstack:comment-sicko`"],
   ["general-purpose", "`general-purpose`"],
-];
+]);
 
-const skillText = markdownFiles(skillsDir)
-  .filter((f) => !f.endsWith("/codex-tools.md") && !f.endsWith("/copilot-tools.md"))
-  .map((f) => [relative(skillsDir, f), readFileSync(f, "utf8")]);
-
-describe("copilot-tools.md coverage", () => {
-  for (const [term, row] of TERMS) {
-    const users = skillText.filter(([, text]) => text.includes(term)).map(([rel]) => rel);
-    test(`${term} (${users.length} files) has a Copilot mapping`, () => {
-      if (users.length) expect(mapping).toContain(row);
-    });
-  }
-
+describe("copilot-tools.md", () => {
   test("the mapping ships no model slug", () => {
     for (const slug of [...models.codex.panel, models.codex.default, models.codex.strongest]) expect(mapping).not.toContain(slug);
   });
@@ -61,7 +51,11 @@ describe("copilot-tools.md coverage", () => {
   test("every skill with a per-skill note exists and every pointed skill has one or needs none", () => {
     const table = mapping.slice(mapping.indexOf("## Per-skill notes"), mapping.indexOf("## Vendored scripts"));
     const noted = [...table.matchAll(/^\| `([a-z0-9-]+)` \|/gm)].map((m) => m[1]);
-    const skills = new Set(skillText.filter(([rel]) => rel.endsWith("/SKILL.md")).map(([rel]) => rel.split("/")[0]));
+    const skills = new Set(
+      markdownFiles(skillsDir)
+        .filter((f) => f.endsWith("/SKILL.md"))
+        .map((f) => relative(skillsDir, f).split("/")[0]),
+    );
     for (const name of noted) expect(skills.has(name)).toBe(true);
     for (const name of ["interrogate", "setup-pstack", "no-comments", "reflect", "recall", "babysit"]) {
       expect(noted).toContain(name);

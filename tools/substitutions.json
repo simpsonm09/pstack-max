@@ -17,8 +17,26 @@
       "rationale": "the port's create-verification-skill writes a project skill named verify (#71)"
     },
     {
+      "pattern": "Write a project-local skill with frontmatter that names the area and says when to use it.",
+      "files": "^skills/create-formal-verification-skill/SKILL\\.md$",
+      "replacement": "Write a project-local skill with frontmatter that names the area and says when to use it. Name the skill for the area, never `verify` or a `verify-` prefix, which belong to the driver skill `/create-verification-skill` writes. On Claude Code it lives at `.claude/skills/<area>/SKILL.md`.",
+      "rationale": "the port's create-verification-skill writes a project skill named verify, and older generators wrote verify-* (#71), so a formal skill must not take either name; the Codex, Copilot, and Pi mappings give their runtimes' paths, and this gives Claude Code's"
+    },
+    {
+      "pattern": "A verify skill has no fixed name, so find it by what it does: a project skill that runs a model checker, a prover, or another verifier against named code.",
+      "files": "^skills/maintain-formal-verification-skill/SKILL\\.md$",
+      "replacement": "A verify skill has no fixed name, so find it by what it does: a project skill that runs a model checker, a prover, or another verifier against named code. The project `verify` skill that `/create-verification-skill` writes drives the app and is not one.",
+      "rationale": "the port's driver skill is named verify (#71), so the formal maintainer must not take it for a formal check"
+    },
+    {
+      "regex": "\\bverify skill\\b",
+      "files": "^skills/(create|maintain)-formal-verification-skill/SKILL\\.md$",
+      "replacement": "formal verification skill",
+      "rationale": "the port's driver skill is named verify (#71), so upstream's generic \"verify skill\" for the formal skill reads as the driver; must follow the two formal rules above, whose patterns contain it"
+    },
+    {
       "pattern": "The system prompt names the workspace's `agent-transcripts/` directory.",
-      "replacement": "Claude Code stores them at `~/.claude/projects/<encoded-cwd>/*.jsonl`, where `<encoded-cwd>` is the workspace's working directory with `/` → `-`.",
+      "replacement": "Claude Code stores them at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<encoded-cwd>/*.jsonl`, where `<encoded-cwd>` is the workspace's working directory with each character other than a letter or digit turned into `-`.",
       "rationale": "Claude Code's system prompt does not name a transcripts directory, so the port names the path and its encoding"
     },
     {
@@ -73,7 +91,7 @@
     },
     {
       "pattern": "find this conversation's transcript in the `agent-transcripts/` directory the system prompt names.",
-      "replacement": "find this conversation's transcript in Claude Code's per-project transcripts directory at `~/.claude/projects/<encoded-cwd>/`.",
+      "replacement": "find this conversation's transcript in Claude Code's per-project transcripts directory at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<encoded-cwd>/`.",
       "rationale": "Cursor's system prompt names its agent-transcripts directory; Claude Code's does not, so the port names the path"
     },
     {
@@ -164,7 +182,7 @@
     },
     {
       "pattern": "`~/Library/Application Support/Cursor` (`state.vscdb.backup`, and `snapshots/roots/<root>` where a `<root>` named for a folder you opened as a workspace balloons)",
-      "replacement": "your editor's application-support caches, `~/.claude/shell-snapshots/` and old `~/.claude/projects/` transcripts (keep the recent ones the **recall** skill and Session pickup read)",
+      "replacement": "your editor's application-support caches, `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/shell-snapshots/` and old `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/` transcripts (keep the recent ones the **recall** skill and Session pickup read)",
       "rationale": "Claude Code's own disk use, in place of Cursor's"
     },
     {
@@ -351,6 +369,11 @@
       "rationale": "the reviewer table is stamped from the panel in models.json, so the prose names no label run that a panel change would make wrong"
     },
     {
+      "pattern": "~/.cursor/skills/",
+      "replacement": "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/",
+      "rationale": "Claude Code reads user skills from its config directory; must precede the .cursor/skills/ rule, whose pattern it contains"
+    },
+    {
       "pattern": ".cursor/skills/",
       "replacement": ".claude/skills/",
       "rationale": "personal skills directory"
@@ -362,18 +385,18 @@
     },
     {
       "pattern": "`~/.cursor/projects/*/`",
-      "replacement": "`~/.claude/projects/`",
-      "rationale": "Claude Code keeps every project's transcripts under ~/.claude/projects/"
+      "replacement": "`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`",
+      "rationale": "Claude Code keeps every project's transcripts under ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/"
     },
     {
       "regex": "the active workspace's `agent-transcripts/` directory(?: \\(the system prompt names (?:the|this) path\\))?",
-      "replacement": "Claude Code's per-project transcripts directory at `~/.claude/projects/<encoded-cwd>/`",
+      "replacement": "Claude Code's per-project transcripts directory at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<encoded-cwd>/`",
       "rationale": "Cursor's system prompt names its agent-transcripts directory; Claude Code's does not, so the port names the path"
     },
     {
       "pattern": "~/.cursor/plugins/",
-      "replacement": "~/.claude/plugins/",
-      "rationale": "Claude Code installs plugins under ~/.claude/plugins/"
+      "replacement": "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/",
+      "rationale": "Claude Code installs plugins under ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/"
     },
     {
       "pattern": ".cursor-plugin/plugin.json",
@@ -464,7 +487,7 @@
       "pattern": "pick the reasoning level and speed the job needs. The `/setup-pstack` budget sets each role's starting level, xhigh by default.",
       "files": "^skills/poteto-mode/SKILL\\.md$",
       "replacement": "pick the reasoning level the job needs, set as [Reasoning effort](#reasoning-effort) describes. The role's `@level`, or the sheet's `default effort` line, sets its starting level, and `session` starts from the session's level.",
-      "rationale": "the port's per-spawn effort lever is the override sheet's @level and the effort agents, not a slug suffix"
+      "rationale": "the port's per-spawn effort lever is the override sheet's @level and the Agent call's effort parameter, not a slug suffix"
     },
     {
       "pattern": "Use fast mode only when the job is urgent, meaning CI or trunk is red or a person is blocked on the result right now. Otherwise use standard speed, the same slug without `-fast`.",
@@ -640,7 +663,7 @@
     },
     {
       "token": "agent-transcripts",
-      "hint": "Cursor's per-workspace transcript directory; Claude Code keeps transcripts under ~/.claude/projects/"
+      "hint": "Cursor's per-workspace transcript directory; Claude Code keeps transcripts under ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/"
     },
     {
       "token": "environment: \"cloud\"",

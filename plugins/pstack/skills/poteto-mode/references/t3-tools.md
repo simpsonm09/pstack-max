@@ -8,7 +8,7 @@ Do not infer T3 from an environment variable or from the host being started by T
 
 ## Precedence
 
-When this mapping applies, it outranks each skill's Models and Reasoning effort sections, its table defaults, the native sheet `pstack-models.md`, the `@<level>` syntax and `pstack:effort-*` agents, and the host's `*-tools.md` file for dispatch, models, schedules, and pull request watching only. Everything else follows the host mapping. Every mention of `pstack-models.md` in a skill means `pstack-t3-models.md` while this mapping applies.
+When this mapping applies, it outranks each skill's Models and Reasoning effort sections, its table defaults, the native sheet `pstack-models.md`, the native `@<level>` syntax and dispatch effort fields, and the host's `*-tools.md` file for dispatch, models, schedules, and pull request watching only. Everything else follows the host mapping. Every mention of `pstack-models.md` in a skill means `pstack-t3-models.md` while this mapping applies.
 
 ## Tool actions
 
