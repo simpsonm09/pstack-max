@@ -82,6 +82,7 @@ try {
   $start = New-Object System.Diagnostics.ProcessStartInfo
   $start.FileName = $sh
   $start.Arguments = (Quote-ProcessArgument (Join-Path $env:COPILOT_PLUGIN_ROOT 'hooks\pre-tool-use.sh'))
+  if ($env:PSTACK_HOOK_DEBUG) { $start.Arguments = '-x ' + $start.Arguments }
   $start.WorkingDirectory = $env:COPILOT_PLUGIN_ROOT
   $start.UseShellExecute = $false
   $start.CreateNoWindow = $true
