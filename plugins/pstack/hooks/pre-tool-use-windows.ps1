@@ -31,10 +31,11 @@ function Convert-PayloadPaths([string] $Text) {
 }
 
 function Quote-ProcessArgument([string] $Value) {
-  return '"' + $Value + '"'
+  return '"' + $Value.Replace('"', '\"') + '"'
 }
 
 $process = $null
+$payloadFile = $null
 try {
   $git = Get-Command git.exe -ErrorAction SilentlyContinue
   if (-not $git) { $git = Get-Command git -ErrorAction SilentlyContinue }
@@ -79,10 +80,16 @@ try {
     if (-not $posixHome) { exit 0 }
   }
 
+  # The payload goes to the POSIX hook through a file rather than a pipe: sh reads it with a
+  # redirect, so no pipe handle has to survive the hand-off from PowerShell to MSYS.
+  $payload = Convert-PayloadPaths ((New-Object System.IO.StreamReader([Console]::OpenStandardInput(), (New-Object System.Text.UTF8Encoding($false)))).ReadToEnd())
+  $payloadFile = [IO.Path]::GetTempFileName()
+  [IO.File]::WriteAllText($payloadFile, $payload, (New-Object System.Text.UTF8Encoding($false)))
+  $hookPath = ConvertTo-PosixPath (Join-Path $env:COPILOT_PLUGIN_ROOT 'hooks\pre-tool-use.sh')
   $start = New-Object System.Diagnostics.ProcessStartInfo
   $start.FileName = $sh
-  $start.Arguments = (Quote-ProcessArgument (Join-Path $env:COPILOT_PLUGIN_ROOT 'hooks\pre-tool-use.sh'))
-  if ($env:PSTACK_HOOK_DEBUG) { $start.Arguments = '-x ' + $start.Arguments }
+  $trace = if ($env:PSTACK_HOOK_DEBUG) { '-x ' } else { '' }
+  $start.Arguments = $trace + '-c ' + (Quote-ProcessArgument 'exec "$0" < "$1"') + ' ' + (Quote-ProcessArgument $hookPath) + ' ' + (Quote-ProcessArgument (ConvertTo-PosixPath $payloadFile))
   $start.WorkingDirectory = $env:COPILOT_PLUGIN_ROOT
   $start.UseShellExecute = $false
   $start.CreateNoWindow = $true
@@ -101,9 +108,6 @@ try {
   $stderr = New-Object System.IO.MemoryStream
   $outTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
   $errTask = $process.StandardError.BaseStream.CopyToAsync($stderr)
-  $payload = Convert-PayloadPaths ((New-Object System.IO.StreamReader([Console]::OpenStandardInput(), (New-Object System.Text.UTF8Encoding($false)))).ReadToEnd())
-  $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($payload)
-  $process.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
   $process.StandardInput.Close()
   if (-not $process.WaitForExit(8000)) {
     $process.Kill()
@@ -122,5 +126,6 @@ try {
   if ($process -and -not $process.HasExited) {
     try { $process.Kill() } catch { }
   }
+  if ($payloadFile) { Remove-Item -LiteralPath $payloadFile -Force -ErrorAction SilentlyContinue }
 }
 exit 0
