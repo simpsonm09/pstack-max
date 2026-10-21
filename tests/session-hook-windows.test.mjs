@@ -166,7 +166,7 @@ const gitRoot = (() => {
 })();
 
 // The POSIX hook, run as the `bash` command on macOS and Linux.
-function runPosix({ plugin, home }) {
+function runPosix({ plugin, home }, input, command = copilotStart.bash) {
   if (!gitRoot) throw new Error("Git for Windows (bin/sh.exe and usr/bin/iconv.exe) is needed for the POSIX side");
   const env = {
     PATH: [join(gitRoot, "usr", "bin"), join(gitRoot, "bin")].join(delimiter),
@@ -174,7 +174,7 @@ function runPosix({ plugin, home }) {
     COPILOT_PLUGIN_ROOT: forwardSlashes(plugin),
     COPILOT_HOME: forwardSlashes(home),
   };
-  const r = spawnSync(join(gitRoot, "bin", "sh.exe"), ["-c", copilotStart.bash], { env });
+  const r = spawnSync(join(gitRoot, "bin", "sh.exe"), ["-c", command], { env, input });
   if (r.error) throw r.error;
   return { status: r.status, out: r.stdout, err: r.stderr.toString("utf8") };
 }
@@ -213,21 +213,52 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
     );
   });
 
-  // Copilot runs the `bash` command of a hook with no `powershell` command on
-  // Windows, and there /bin/bash has no COPILOT_PLUGIN_ROOT, so the POSIX hook
-  // errors and Copilot denies the call. The stub keeps the call on the normal
-  // permission flow instead.
-  test("the PreToolUse command on Windows makes no decision and exits 0", () => {
+  // Six Windows PowerShell 5.1 starts: slow on hosted runners, so this gets the long timeout
+  // the 5.1-and-7 comparison below uses.
+  test("the PreToolUse command runs the shared hook and fails open without Git", () => {
     expect(copilotPreToolUse.powershell).toBe(
       'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:COPILOT_PLUGIN_ROOT/hooks/pre-tool-use-windows.ps1"',
     );
-    withCopilotPlugin({}, (fixture) => {
-      for (const input of [JSON.stringify({ toolName: "view", toolArgs: { path: "C:\\x" } }), "not json", ""]) {
-        const r = runPowerShell(fixture, "powershell.exe", { command: copilotPreToolUse.powershell, input });
-        expect({ status: r.status, out: r.out.toString("utf8"), err: r.err }).toEqual({ status: 0, out: "", err: "" });
+    withCopilotPlugin({ sheet: validSheet() }, (fixture) => {
+      const runWindows = (input, withoutGit = false) => {
+        const system = join(process.env.SystemRoot, "System32");
+        const env = {
+          SystemRoot: process.env.SystemRoot,
+          PATH: withoutGit ? join(system, "WindowsPowerShell/v1.0") : [join(gitRoot, "cmd"), join(system, "WindowsPowerShell/v1.0"), system].join(delimiter),
+          PATHEXT: process.env.PATHEXT,
+          USERPROFILE: fixture.home,
+          COPILOT_PLUGIN_ROOT: fixture.plugin,
+          COPILOT_HOME: fixture.home,
+        };
+        for (const name of ["TEMP", "TMP", "LOCALAPPDATA", "APPDATA", "ProgramData", "PSModulePath"]) {
+          if (process.env[name] !== undefined) env[name] = process.env[name];
+        }
+        const r = spawnSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(fixture.plugin, "hooks/pre-tool-use-windows.ps1")], { env, input });
+        if (r.error) throw r.error;
+        return { status: r.status, out: r.stdout, err: r.stderr.toString("utf8") };
+      };
+      const sameAsPosix = (input) => {
+        const expected = runPosix(fixture, input, copilotPreToolUse.bash);
+        const actual = runWindows(input);
+        expect({ status: expected.status, statusWindows: actual.status, err: actual.err }).toEqual({ status: 0, statusWindows: 0, err: "" });
+        expect(actual.out.toString("utf8")).toBe(expected.out.toString("utf8"));
+        return actual.out.toString("utf8");
+      };
+      const pluginPath = forwardSlashes(join(fixture.plugin, "hooks/copilot-hooks.json"));
+      expect(sameAsPosix(JSON.stringify({ toolName: "view", toolArgs: { path: pluginPath } }))).toBe('{"permissionDecision":"allow"}\n');
+      const denied = sameAsPosix(JSON.stringify({ toolName: "task", toolArgs: { agent_type: "pstack:bug-fix", model: "not-saved" } }));
+      expect(JSON.parse(denied).permissionDecision).toBe("deny");
+      for (const input of [JSON.stringify({ toolName: "task", toolArgs: { agent_type: "other:agent", model: "not-saved" } }), "not json"]) {
+        expect(sameAsPosix(input)).toBe("");
       }
+      // Copilot on Windows sends backslash paths; the wrapper rewrites them so the view rule still applies.
+      const windowsPath = join(fixture.plugin, "hooks", "copilot-hooks.json").replaceAll("/", "\\");
+      const windowsView = runWindows(JSON.stringify({ toolName: "view", toolArgs: { path: windowsPath }, cwd: fixture.home }));
+      expect({ status: windowsView.status, out: windowsView.out.toString("utf8") }).toEqual({ status: 0, out: '{"permissionDecision":"allow"}\n' });
+      const noGit = runWindows(JSON.stringify({ toolName: "view", toolArgs: { path: pluginPath } }), true);
+      expect({ status: noGit.status, out: noGit.out.toString("utf8"), err: noGit.err }).toEqual({ status: 0, out: "", err: "" });
     });
-  });
+  }, 180000);
 
   for (const { name, sheet, off } of sheetCases) {
     if (hasStrayCarriageReturn(sheet)) {
