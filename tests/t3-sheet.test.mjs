@@ -132,6 +132,32 @@ describe("T3 model sheet parsing", () => {
     expect(check(`${PANEL}: instance-alpha/familya-main effort=high, instance-alpha/familyb-review`, { allowList })).toEqual([]);
   });
 
+  test.each(["true", "false"])("accepts boolean option fastMode=%s without a catalog options list", (value) => {
+    expect(check(`bug-fix: instance-alpha/familya-main fastMode=${value}`)).toEqual([]);
+  });
+
+  test("rejects a boolean option value other than true or false", () => {
+    expect(check("bug-fix: instance-alpha/familya-main fastMode=maybe")).toEqual([
+      'bug-fix: entry "instance-alpha/familya-main fastMode=maybe": option value fastMode=maybe is not listed (available: true, false)',
+    ]);
+  });
+
+  test.each([
+    { canRunCrossProviderChildTask: false, constraints: ["Same-provider children only"] },
+    { canRunCrossProviderChildTask: true, constraints: ["Review only"] },
+    { canRunCrossProviderChildTask: false },
+  ])("warns about provider restrictions without rejecting the target: %j", (restriction) => {
+    const restricted = structuredClone(catalog);
+    Object.assign(restricted.providers[0], restriction);
+    const warnings = [];
+    expect(check("bug-fix: instance-alpha/familya-main", { catalog: restricted, warnings })).toEqual([]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(JSON.stringify(restriction.constraints ?? []));
+    if (restriction.canRunCrossProviderChildTask === false) {
+      expect(warnings[0]).toContain("canRunCrossProviderChildTask: false");
+    }
+  });
+
   test("accepts a read-only instance for a read-only role", () => {
     const readOnlyAllowList = {
       instances: { "instance-beta": { layers: [], gate: false, readOnly: true } },
@@ -212,7 +238,7 @@ describe("T3 model sheet parsing", () => {
 
   test("an unknown option is rejected", () => {
     expect(check("bug-fix: instance-alpha/familya-main unknown=high")).toContain(
-      'bug-fix: entry "instance-alpha/familya-main unknown=high": option "unknown" is not listed for "familya-main" (available: effort, mode)',
+      'bug-fix: entry "instance-alpha/familya-main unknown=high": option "unknown" is not listed for "familya-main" (available: effort, fastMode, mode)',
     );
   });
 
@@ -307,6 +333,30 @@ describe("t3-sheet.mjs command line", () => {
     expect(result.stderr).toBe(
       "warning: no allow-list was supplied; children may run without the pstack layer or access gate\n",
     );
+  });
+
+  test("prints provider constraints as warnings and exits 0", () => {
+    const temp = mkdtempSync(join(tmpdir(), "pstack-t3-warning-"));
+    try {
+      const restricted = structuredClone(catalog);
+      Object.assign(restricted.providers[0], {
+        canRunCrossProviderChildTask: false,
+        constraints: ["Same-provider children only"],
+      });
+      const catalogPath = join(temp, "catalog.json");
+      const sheetPath = join(temp, "sheet.md");
+      writeFileSync(catalogPath, JSON.stringify(restricted));
+      writeFileSync(sheetPath, "bug-fix: instance-alpha/familya-main fastMode=true");
+      const result = spawnSync(process.execPath, [
+        join(root, "plugins/pstack/skills/setup-pstack/scripts/t3-sheet.mjs"),
+        sheetPath, catalogPath,
+      ], { encoding: "utf8" });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("ok\n");
+      expect(result.stderr).toContain('warning: bug-fix: entry "instance-alpha/familya-main fastMode=true": provider instance "instance-alpha" has canRunCrossProviderChildTask: false; constraints: ["Same-provider children only"]');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 
   test("prints one role-and-entry problem and exits 1 for an invalid sheet", () => {

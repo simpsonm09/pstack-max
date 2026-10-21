@@ -126,7 +126,7 @@ function allowListProblems(allowList) {
   return problems;
 }
 
-function targetProblems(entry, role, catalog, allowList) {
+function targetProblems(entry, role, catalog, allowList, warnings) {
   const { providerInstanceId, model, options } = entry;
   const label = entry.text;
   const provider = catalog?.providers?.find((item) => item.providerInstanceId === providerInstanceId);
@@ -136,6 +136,9 @@ function targetProblems(entry, role, catalog, allowList) {
   } else {
     if (provider.canRunChildTask !== true) {
       problems.push(`entry "${label}": provider instance "${providerInstanceId}" does not have canRunChildTask: true`);
+    }
+    if (provider.canRunCrossProviderChildTask === false || provider.constraints?.length) {
+      warnings.push(`entry "${label}": provider instance "${providerInstanceId}"${provider.canRunCrossProviderChildTask === false ? " has canRunCrossProviderChildTask: false" : " has constraints"}; constraints: ${JSON.stringify(provider.constraints ?? [])}`);
     }
     const modelInfo = provider.models?.find((item) => item.id === model);
     if (!modelInfo) {
@@ -150,7 +153,7 @@ function targetProblems(entry, role, catalog, allowList) {
           );
           continue;
         }
-        const values = (option.options ?? []).map((item) => item.id);
+        const values = option.type === "boolean" ? ["true", "false"] : (option.options ?? []).map((item) => item.id);
         if (!values.includes(value)) {
           problems.push(
             `entry "${label}": option value ${id}=${value} is not listed (available: ${values.join(", ") || "none"})`,
@@ -180,7 +183,7 @@ function targetProblems(entry, role, catalog, allowList) {
   return problems;
 }
 
-export function checkSheet(rows, { roles, catalog, allowList } = {}) {
+export function checkSheet(rows, { roles, catalog, allowList, warnings = [] } = {}) {
   const problems = allowList === undefined ? [] : allowListProblems(allowList);
   const knownRoles = new Set(roles.map((item) => item.role));
   const panels = new Set(roles.filter((item) => item.models === "panel" || item.panel === true).map((item) => item.role));
@@ -232,7 +235,9 @@ export function checkSheet(rows, { roles, catalog, allowList } = {}) {
     }
     const validTargets = [];
     for (const target of targets) {
-      const faults = targetProblems(target, row.key, catalog, allowList);
+      const targetWarnings = [];
+      const faults = targetProblems(target, row.key, catalog, allowList, targetWarnings);
+      warnings.push(...targetWarnings.map((warning) => `${row.key}: ${warning}`));
       problems.push(...faults.map((fault) => `${row.key}: ${fault}`));
       if (!faults.length) validTargets.push(target);
     }
@@ -274,11 +279,13 @@ function main() {
   const catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
   const allowList = allowPath === undefined ? undefined : JSON.parse(readFileSync(allowPath, "utf8"));
   const rows = parseSheet(readFileSync(sheetPath, "utf8"));
-  const problems = checkSheet(rows, { roles: models.roles, catalog, allowList });
+  const warnings = [];
+  const problems = checkSheet(rows, { roles: models.roles, catalog, allowList, warnings });
 
   if (allowList === undefined) {
     console.error("warning: no allow-list was supplied; children may run without the pstack layer or access gate");
   }
+  for (const warning of warnings) console.error(`warning: ${warning}`);
   for (const problem of problems) console.log(problem);
   if (problems.length) {
     process.exitCode = 1;
