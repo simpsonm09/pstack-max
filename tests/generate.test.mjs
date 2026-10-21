@@ -534,7 +534,7 @@ describe("lead lines", () => {
     expect(t3.key).toBeUndefined();
     expect(t3.modelNames).toBeUndefined();
     expect(models.t3).toBeUndefined();
-    expect(declared).toEqual(["arena", "architect", "automate-me", "babysit", "how", "interrogate", "maintain-verification-skill", "no-comments", "poteto-mode", "reflect", "setup-pstack", "swarm", "teach", "thermos", "why"]);
+    expect(declared).toEqual(["arena", "architect", "automate-me", "babysit", "create-verification-skill", "how", "interrogate", "ketchup", "maintain-verification-skill", "no-comments", "poteto-help", "poteto-mode", "recall", "reflect", "setup-pstack", "show-me-your-work", "swarm", "teach", "thermos", "why"]);
     const stamped = [...leads].filter(([, values]) => values.includes(t3.preamble)).map(([file]) => file.replace("plugins/pstack/skills/", "").replace("/SKILL.md", ""));
     expect(stamped.sort()).toEqual([...declared].sort());
     expect(codex.preamble).toContain("On Codex");

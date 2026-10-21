@@ -8,7 +8,7 @@ Its lineage is:
 
 - [pstack](https://github.com/cursor/plugins/tree/main/pstack) by Lauren Tan, the original Cursor skill stack.
 - [pstack-claude](https://github.com/michael-denyer/pstack-claude) by Michael Denyer, the port to Claude Code, Codex, Pi, and GitHub Copilot.
-- [t3-pstack](https://github.com/chhoumann/t3-pstack) by Christian Bager Bach Houmann, a sibling fork and reference for an optional T3 dispatch overlay. This fork adapts `t3-tools.md`; its sheet checker and tests are independently implemented for this repository.
+- [t3-pstack](https://github.com/chhoumann/t3-pstack) by Christian Bager Bach Houmann, a sibling fork and reference for an optional T3 dispatch overlay. This fork adapts `t3-tools.md` from t3-pstack 1.0.14 (`5c3f2fa`), which upstream removed in 2.0; its sheet checker and tests are independently implemented for this repository.
 
 What this fork adds:
 

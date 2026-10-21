@@ -9,6 +9,8 @@ On GitHub Copilot, read the [platform mapping](../poteto-mode/references/copilot
 
 On Muse, read the [platform mapping](../poteto-mode/references/muse-tools.md), including its per-skill notes, before following this skill.
 
+Inside T3 Code (the live tool list has `delegate_task` and `orchestrator_capabilities`), follow [t3-tools.md](../poteto-mode/references/t3-tools.md) for dispatch, models, schedules and pull request watching. Otherwise ignore this line.
+
 Keep one canonical log.
 
 ## The format

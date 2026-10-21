@@ -26,13 +26,13 @@
     },
     "plugins/pstack/skills/create-verification-skill/SKILL.md": {
       "kind": "port-feature",
-      "why": "Names the generated project skill verify so it replaces Claude Code's bundled user-only /verify and the playbooks can invoke it.",
+      "why": "Names the generated project skill verify so it replaces Claude Code's bundled user-only /verify and the playbooks can invoke it. Also carries the generator-owned conditional T3 routing preamble.",
       "since": "0.9.29",
       "upstream": "not-proposed"
     },
     "plugins/pstack/skills/poteto-help/SKILL.md": {
       "kind": "port-feature",
-      "why": "Routes installation, model-sheet loading, and persistent routing preferences to the current runtime's setup sources, gives installed playbooks precedence over upstream guides, and keeps the port's public skill loading, hidden principles, verification-skill naming, local-worker advice, driver and built-in equivalents, excluded make-bot-ui row, and orchestrate wording as prose changes in this fork.",
+      "why": "Routes installation, model-sheet loading, and persistent routing preferences to the current runtime's setup sources, gives installed playbooks precedence over upstream guides, and keeps the port's public skill loading, hidden principles, verification-skill naming, local-worker advice, driver and built-in equivalents, excluded make-bot-ui row, and orchestrate wording as prose changes in this fork. Also carries the generator-owned conditional T3 routing preamble.",
       "since": "0.9.71",
       "upstream": "not-proposed"
     },
@@ -230,7 +230,7 @@
     },
     "plugins/pstack/skills/recall/SKILL.md": {
       "kind": "policy",
-      "why": "Sweeps the locations the project's standing rules name before reporting anything as never recorded and applies the human-rulings epistemics, on top of Claude Code's transcript path.",
+      "why": "Sweeps the locations the project's standing rules name before reporting anything as never recorded and applies the human-rulings epistemics, on top of Claude Code's transcript path. Also carries the generator-owned conditional T3 routing preamble.",
       "since": "0.9.2",
       "upstream": "not-proposed"
     },
@@ -248,7 +248,7 @@
     },
     "plugins/pstack/skills/show-me-your-work/SKILL.md": {
       "kind": "policy",
-      "why": "Documents that log.sh also neutralizes a cell opening with a double quote.",
+      "why": "Documents that log.sh also neutralizes a cell opening with a double quote. Also carries the generator-owned conditional T3 routing preamble.",
       "since": "0.9.41",
       "upstream": "not-proposed"
     },
