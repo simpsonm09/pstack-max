@@ -350,7 +350,7 @@ export function syncComponent({
     const sub = applySubstitutions(raw.toString("utf8"), rules, rel);
     return { bytes: Buffer.from(derive(rel, sub.text)), counts: sub.counts };
   };
-  const listed = (dir) => new Set(walk(dir).map((file) => relative(dir, file)));
+  const listed = (dir) => new Set(walk(dir).map((file) => relative(dir, file).replaceAll("\\", "/")));
   const [oldPaths, newPaths, localPaths] = [listed(oldDir), listed(newDir), listed(localDir)];
   const upstream = (dir, paths, rel) => {
     if (!paths.has(rel)) return null;
@@ -495,9 +495,9 @@ function pathsOtherComponentsCarry(clone, components, component) {
       git(["-C", clone, "ls-tree", "-r", "-z", "--name-only", other.sha, "--", other.upstreamPath])
         .split("\0")
         .filter(Boolean)
-        .map((path) => relative(other.upstreamPath, path))
+        .map((path) => relative(other.upstreamPath, path).replaceAll("\\", "/"))
         .filter((rel) => !isExcluded(rel, other.exclude ?? []))
-        .map((rel) => relative(localPath, join(other.localPath, rel)))
+        .map((rel) => relative(localPath, join(other.localPath, rel)).replaceAll("\\", "/"))
         .filter((rel) => !rel.startsWith("../")),
     );
 }
@@ -526,7 +526,7 @@ function main() {
   const scratch = mkdtempSync(join(tmpdir(), "pstack-sync-"));
   try {
     console.log(`cloning ${upstream.remote} ...`);
-    git(["clone", "--filter=blob:none", upstream.remote, join(scratch, "clone")]);
+    git(["clone", "-c", "core.autocrlf=false", "--filter=blob:none", upstream.remote, join(scratch, "clone")]);
     const co = (sha, dest) => {
       git(["-C", join(scratch, "clone"), "worktree", "add", "--detach", dest, sha]);
       return join(dest, spec.upstreamPath);
@@ -543,7 +543,7 @@ function main() {
       denylist,
       exclude: spec.exclude ?? [],
       carriedElsewhere: pathsOtherComponentsCarry(join(scratch, "clone"), upstream.components, component),
-      derive: (rel, text) => deriveSkill(join(spec.localPath, rel), text, models, leads),
+      derive: (rel, text) => deriveSkill(`${spec.localPath}/${rel}`, text, models, leads),
       forks,
       atPin,
       dryRun,

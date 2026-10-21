@@ -62,7 +62,8 @@ export function ensureWorktree(wt: Worktree): void {
 export function settleWorktree(wt: Worktree): boolean {
   if (!existsSync(wt.path)) return false;
   assertWorktree(wt);
-  const dirty = git(wt.path, ["status", "--porcelain", "--ignored"]) !== "";
+  // A display preference must not hide output from automatic cleanup.
+  const dirty = git(wt.path, ["status", "--porcelain", "--untracked-files=normal", "--ignored"]) !== "";
   // The reflog goes in on stdin: a long one would overflow an argument list.
   const visited = git(wt.path, ["log", "-g", "--format=%H", "HEAD"]);
   const ahead = git(wt.path, ["rev-list", "--count", "--stdin"], `${visited}\nrefs/heads/${wt.branch}\n^${wt.base}\n`) !== "0";

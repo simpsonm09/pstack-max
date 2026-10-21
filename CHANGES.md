@@ -2,7 +2,75 @@
 
 This file is the release changelog, with one `## <version> - <title>` entry per release, newest first. The Cursor-to-Claude rewrite rules live in [`tools/substitutions.json`](tools/substitutions.json), and the [sync boundary](CONTRIBUTING.md#the-sync-boundary) in `CONTRIBUTING.md` defines how a change to upstream's skill content is declared.
 
-## 0.9.89 - fork runtime release, the OpenCode plugin, conditional T3 routing, and LF checkouts
+## Fork sync - pstack-claude 0.9.99
+
+Merged pstack-claude `ecc6fcf` (0.9.99), including dispatch effort fields, the Muse plugin, and `CLAUDE_CONFIG_DIR` paths. Kept the fork's policy changes, OpenCode build, Windows Copilot hooks, and conditional T3 routing. Updated the T3 mapping to refer to dispatch effort fields. The sync tool now normalizes Windows paths before comparing them with registry entries and checks out its temporary upstream clone with LF line endings.
+
+## 0.9.99 - Skills and plugins paths follow CLAUDE_CONFIG_DIR, and the transcript directory encoding is correct
+
+The skills that named Claude Code's user skills and plugins directories as `~/.claude/skills/` and `~/.claude/plugins/` now name `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/` and `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/`. Claude Code keeps both under its configuration directory. Without this change, on a machine with `CLAUDE_CONFIG_DIR` set, `poteto-agent` searched an empty `~/.claude/plugins/` for the poteto-mode skill, `automate-me` missed personal mode skills, and the `reflect` reviewers ignored the skill reads they were meant to count. The `~/.cursor/plugins/` rule in `tools/substitutions.json` writes the new form, and a new `~/.cursor/skills/` rule runs ahead of the project `.cursor/skills/` rule, so a sync derives the same text and the change adds no fork.
+
+`recall`, `automate-me`, and the Session pickup playbook described `<encoded-cwd>` as the workspace path with `/` changed to `-`, and `recall` said the leading slash was dropped. Claude Code changes every character other than a letter or digit to `-`, the leading slash included, so `/private/tmp/coat_opus48_440` is stored as `-private-tmp-coat-opus48-440`. The three now say so.
+
+`tests/claude-config-dir.test.mjs` now also fails on a `skills` or `plugins` path under `~/.claude` without the variable, and on the old encoding wording. The `~/.claude/orchestrate/` store stays where it is: pstack creates it, not Claude Code. Both gaps were listed in the Scope section of [#298](https://github.com/michael-denyer/pstack-claude/pull/298).
+
+**Verified.** Both tests fail on 14 lines at 0.9.98 and pass here. The sync dry-run at the pinned SHA prints the same ownership map as 0.9.98: 47 forked, 87 unchanged. The encoding comes from the `projects/` directory names on a machine running Claude Code 2.1.296. Claude Code's environment variable reference says plugins live under `CLAUDE_CONFIG_DIR`. For user skills, the 2.1.296 binary joins `skills` onto the same configuration directory. A separate run with the variable set did not happen, because a new configuration directory starts logged out.
+
+## 0.9.98 - Transcript paths follow CLAUDE_CONFIG_DIR
+
+Claude Code writes transcripts under `$CLAUDE_CONFIG_DIR/projects/` when that variable is set, and writes nothing to `~/.claude/projects/`. The skills named the fixed path, so on such a machine `recall` and `automate-me` read a directory that is missing or belongs to another configuration. `reflect` passed that directory to `find-transcript.mjs`, which exited 1 with `ENOENT`, so the skill fell back to a digest every time. The Eval and Session pickup playbooks and `show-me-your-work` had the same gap. `worktree-audit.mjs` has read the variable since 0.9.68.
+
+Every skill and mapping that named `~/.claude/projects/` now names `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`, the directory `worktree-audit.mjs` scans. The default reads `$HOME`, as in the SessionStart hook, because bash leaves `~` unexpanded inside double quotes. The Worktree and simulator cleanup playbook also names Claude Code's shell snapshots as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/shell-snapshots/`. The five rules in `tools/substitutions.json` that write these paths carry the new form, so a sync derives the same text and the change adds no fork. `tests/claude-config-dir.test.mjs` fails when a file outside `CHANGES.md` and `tests/` spells these paths any other way, such as `~/.claude/projects`, a `~` default, or `$CLAUDE_CONFIG_DIR` without a default.
+
+@Poggen found and fixed this in [#298](https://github.com/michael-denyer/pstack-claude/pull/298).
+
+**Verified.** The new test fails on 24 lines in 12 files at 0.9.97 and passes here. With `CLAUDE_CONFIG_DIR` set, the 0.9.97 `reflect` command line exits 1 with `ENOENT`, and the new one prints the session's transcript. With the variable unset, the new line resolves to `~/.claude/projects/`.
+
+## 0.9.97 - Hooks load from a plugin root with a backslash
+
+The Copilot and Muse SessionStart hooks pass their hooks directory to awk through `PSTACK_HOOKS` in the environment instead of `-v`. awk expands backslash escapes in a `-v` value, so a plugin root holding `\t` or `\\`, as a Windows-style path does, pointed awk at a directory that does not exist. The hooks then exited 0 with the mandate missing: Copilot sent `{"additionalContext":"\n\n\n\n"}`, and Muse sent only the sheet's role lines. Closes [#296](https://github.com/michael-denyer/pstack-claude/issues/296).
+
+## 0.9.96 - Muse port
+
+pstack now ships a Muse build. The native plugin manifest under `.muse-plugin/` lists every shared skill and a `SessionStart` hook that injects the poteto-mode mandate in Muse wording once the user approves the plugin's hooks. Muse surfaces each user-invocable skill as a slash command itself, so the build ships no command templates. The plugin's four agent files register as Muse agent definitions, and role effort suffixes pass as a Workflow child's `effort`, the Muse form of the dispatch effort field 0.9.95 standardized on. A new `muse-tools.md` mapping resolves Claude tool names, subagents, transcripts, and Muse model IDs, and `models.json` gains a `muse` block with a model per tier. `setup-pstack` writes the Muse sheet under the Muse config directory, which the hook reads directly. The generator owns the manifest's skill list and the Muse preambles, so the build stays in step with the tree. The Muse hook keeps each usable sheet line through the same `sheet_problems()` check the Copilot hooks use. @LuckyProtein built the port in [#295](https://github.com/michael-denyer/pstack-claude/pull/295).
+
+## 0.9.95 - Effort is a field on the dispatch
+
+An `@level` on a role now reaches the child as the dispatch's own effort field on every runtime: `effort` on the Claude Code `Agent` call, `reasoning_effort` on Codex's `spawn_agent` and Copilot's `task`, and `effort` on Pi's `agent` tool. The ten generated agents, `effort-<level>` and `poteto-agent-<level>`, are gone, and so is the `agents` list in the Claude Code plugin manifest. They existed only because the `Agent` call had no effort parameter, and Claude Code 2.1.292 added one. Without the list Claude Code registers the default `agents/` directory, so pstack's agent types are exactly the four under `agents/`: `comment-sicko`, `poteto-agent`, and the two thermo-nuclear subagents. The generator now fails if the manifest gains an `agents` list again. Claude Code 2.1.292 or later is required for `@level`.
+
+On Pi, the `agent` tool takes an optional `effort` that the extension passes to the child as `--thinking`. A value outside the levels in `models.json` errors and names the valid ones, and no child starts. An agent file's `effort` frontmatter is no longer read, since no file under `agents/` set it. Omitting `effort` still runs the child at the parent's thinking level. @yehheng3-hub proposed the change in [#293](https://github.com/michael-denyer/pstack-claude/issues/293).
+
+**Verified.** On Claude Code 2.1.296, a `claude -p --plugin-dir` session on this branch at `xhigh` listed only the four `agents/` types, and per-turn effort in the subagent transcripts read `low` for `general-purpose` and `pstack:poteto-agent` spawned with `effort: "low"`, and `xhigh` for a spawn without one. With `swarm workers: sonnet @low` in a project override sheet, `/pstack:swarm` in a `medium` session dispatched both workers as `general-purpose` with `effort: "low"`, and their turns ran at `low`. On Pi 1.3.0, `PSTACK_PI_LIVE=1 bun test tests/pi/live.test.mjs` passed 11 of 11, including a `pstack:poteto-agent` child spawned with `effort: "high"` whose session records thinking `high`. The upstream Claude Code adapter at the pinned `7b353f7` maps a role's level to the same `effort` field.
+
+## 0.9.94 - formal verification skills
+
+Sync to upstream `7b353f7` (v0.15.27 and later). Two skills are new. `/create-formal-verification-skill` picks the property in the repo where a bug costs the most and tests reach the least, verifies it with the tool that fits (TLA+ by default for ordering bugs, a code-level verifier or a proof otherwise), shows each property failing on a broken variant, and leaves a project-local skill that the next agent reruns. That skill records the files it covers and the commit it was last confirmed against. `/maintain-formal-verification-skill` finds the commits that touched the covered code since then, updates the model, harness, or properties, reruns, and says whether each failure is drift in the verification or a bug in the code. Both are model-invocable, as every public skill in the port is.
+
+The port's `/create-verification-skill` writes a project skill named `verify`, so a new substitution rule tells `/create-formal-verification-skill` to name its skill for the area it verifies, never `verify` or a `verify-` prefix, and to write it to `.claude/skills/<area>/` on Claude Code. Another tells `/maintain-formal-verification-skill` that the project `verify` skill is not a formal check, and a third renames upstream's "verify skill" to "formal verification skill" in both, so the term never reads as the driver. `/setup-pstack` gains a step 10 that offers the formal skill once, after the verification-skill offer, and `/poteto-help` mentions both skills when a question is about a race, an invariant, or drifted formal checks. The Codex, Pi, and Copilot mappings say where those runtimes keep the generated skill. The README now says how the built-in skill relates to the separate [agent-formal-verify](https://github.com/michael-denyer/agent-formal-verify) plugin.
+
+The sync also carries upstream's wording updates to `/ketchup`, `/sharpen`, `/typescript-best-practices`, and the `/poteto-help` recipes.
+
+## 0.9.93 - orch reads gh head repositories on gh before 2.80
+
+`orch frontier set` no longer rejects every gh pull request row as invalid on gh before 2.80.0, whose `headRepository` carries only `id` and `name`. The gh query now asks for `headRepositoryOwner` too and builds the head repository from the owner's login and the repository name, as `watch-pr` already does, so it reads the same on every gh version. A malformed owner still fails the row, and a deleted fork still drops out of the chain. @newinh found and fixed it in [#288](https://github.com/michael-denyer/pstack-claude/pull/288).
+
+## 0.9.92 - Pi keeps hidden worktree output and quotes transcript paths
+
+On Pi, an agent's worktree is no longer removed as clean when `status.showUntrackedFiles=no` hides its new or ignored files from `git status`. The cleanup check sets `--untracked-files=normal` itself, as the worktree audit already did, and leaves the user's setting alone. The `/pstack-agents` read command now quotes a transcript path that contains spaces, quotes, `$`, or other shell syntax, so `tail -f` and `pi --export` get it as one argument. The `transcript:` line still shows the raw path. @EthanYoQ found and fixed both, in [#284](https://github.com/michael-denyer/pstack-claude/pull/284) and [#285](https://github.com/michael-denyer/pstack-claude/pull/285).
+
+## 0.9.91 - Calibrate comparison tools
+
+Build the Lever requires known-bad controls for each comparison output and refuses a match when required input is missing.
+
+## 0.9.90 - Pi shows what a running agent is doing
+
+On Pi, a running agent's `list_agents` entry gains an `activity` field: its current tool call, or the last one once it ended, as the tool name and a one-line summary of its arguments, and the first line of its latest message. A footer line, `pstack: 2 running · a1b2c3d4 bash: ls -la`, names the count and the most recently active agent while any runs, including one `send_message` resumes after a reload, and clears when none does. The new `/pstack-agents` command shows each agent's status, activity, transcript path, and the command to read it: `tail -f` while it runs, `pi --export` once it ended. Activity is read from the child's RPC stream and held in memory. The extension never appends it to the session or sends it as a message, so the model sees it only in a `list_agents` result, and the child's session has no second writer. Only the top-level session sets the footer. @Nickonomic asked for a way to see a background agent's work while it runs (#279); this completes the live view that 0.9.89's transcript path began.
+
+## 0.9.89 - Pi agents name their transcript
+
+On Pi, `list_agents` gains a `sessionFile` field for each agent: the child's session file, `<timestamp>_<session id>.jsonl` in the agent's session directory. The completion notice and a foreground agent's result carry the same path on a `transcript:` line. A user can follow a running background agent with `tail -f <sessionFile>` and render a finished one with `pi --export <sessionFile>`; before this, they had to find the file by hand. Pi writes the file once the child's first message is in and reopens it on a resume, so an agent keeps one path for its whole life, and one with no file yet lists none. @Nickonomic asked for a way to see a background agent's work while it runs (#279); this covers finding the transcript, and a live activity view follows.
+
+## Fork 0.9.89 - runtime release, the OpenCode plugin, conditional T3 routing, and LF checkouts
 
 This is the fork's own release number. Upstream's `0.9.87` and `0.9.88` now exist and hold those numbers, the fork has published no tag or release, and the installed fork pin reads `0.9.85`, so the fork's next release takes `0.9.89`. This entry replaces the fork's earlier `0.9.87` draft, which upstream's `0.9.87` would otherwise collide with; the content is the same release. The tree is upstream's `0.9.88` sync with the fork's runtime overlay kept on top of it.
 

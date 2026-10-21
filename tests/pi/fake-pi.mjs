@@ -8,7 +8,10 @@
 // Steps: { reply } emits an assistant message_end ("${prompt}", "${history}"
 // and "${steered}" expand; history is the earlier prompts of the same
 // --session-id, steered the steer messages taken so far); { error } emits a
-// failed assistant message; { raw } writes stdout verbatim; { stderr },
+// failed assistant message; { toolStart: { name, args, id } } and
+// { toolEnd: "<name>" } or { toolEnd: { name, id } } emit tool_execution_start
+// and tool_execution_end, with toolCallId id (default "t1");
+// { raw } writes stdout verbatim; { stderr },
 // { sleep: ms }, { exit: code } ends the process at once, { spawn: "<kind>" }
 // starts a sleeping process of a kind in SPAWNS below and logs it as
 // "grandchild" with that kind in `as`, { ignoreSigterm: true },
@@ -55,7 +58,8 @@ const out = (event) => {
 const respond = (command, extra = {}) => out({ type: "response", id: command.id, command: command.type, success: true, ...extra });
 
 let history = [];
-const sessionFile = sessionId && sessionDir ? join(sessionDir, `${sessionId}.fake.jsonl`) : undefined;
+// Pi's file name, with one timestamp so a resume finds the file again as pi does.
+const sessionFile = sessionId && sessionDir ? join(sessionDir, `2026-01-01T00-00-00-000Z_${sessionId}.jsonl`) : undefined;
 if (sessionFile) {
   mkdirSync(sessionDir, { recursive: true });
   if (existsSync(sessionFile)) history = readFileSync(sessionFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
@@ -83,6 +87,11 @@ const STEPS = {
   reply: (text) => {
     out({ type: "message_end", message: assistant([{ type: "text", text: expand(text) }]) });
     log({ kind: "reply", pid: process.pid });
+  },
+  toolStart: ({ name, args, id = "t1" }) => out({ type: "tool_execution_start", toolCallId: id, toolName: name, args }),
+  toolEnd: (end) => {
+    const { name, id = "t1" } = typeof end === "string" ? { name: end } : end;
+    out({ type: "tool_execution_end", toolCallId: id, toolName: name, result: { content: [] }, isError: false });
   },
   error: (message) => out({ type: "message_end", message: assistant([], { stopReason: "error", errorMessage: message }) }),
   raw: (text) => process.stdout.write(text),

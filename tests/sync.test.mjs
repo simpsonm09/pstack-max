@@ -77,6 +77,32 @@ function underUmask(mask, body) {
   }
 }
 
+test("nested sync paths use registry spelling for exclusions, substitutions, derivation, and forks", () => {
+  const files = { "docs/guide.md": "excluded\n", "skills/example/SKILL.md": "upstream\n" };
+  const local = tree({ "skills/example/SKILL.md": "port\n" });
+  const seen = [];
+  const report = sync({
+    oldDir: tree(files),
+    newDir: tree(files),
+    localDir: local,
+    rules: parseSubstitutions({
+      substitutions: [{ pattern: "upstream", files: "^skills/example/SKILL\\.md$", replacement: "derived", rationale: "Match nested paths on every platform." }],
+      denylist: [],
+    }).substitutions,
+    exclude: ["docs/"],
+    forks: new Map([["skills/example/SKILL.md", { kind: "policy" }]]),
+    derive: (rel, text) => { seen.push([rel, text]); return text; },
+    atPin: true,
+    dryRun: true,
+  });
+  expect(seen).toEqual([["skills/example/SKILL.md", "derived\n"], ["skills/example/SKILL.md", "derived\n"]]);
+  expect(report.excluded).toBe(1);
+  expect(report.forked.map(({ rel }) => rel)).toEqual(["skills/example/SKILL.md"]);
+  expect(report.undeclared).toEqual([]);
+  expect(report.stale).toEqual([]);
+  expect(report.written).toEqual([]);
+});
+
 describe("applySubstitutions", () => {
   test("rewrites Cursor primitives and counts per rule", () => {
     const { text, counts } = applySubstitutions(
@@ -201,17 +227,17 @@ describe("applySubstitutions", () => {
     [
       "skills/reflect/references/judgment-reviewer.md",
       "plugin-installed paths under `~/.cursor/plugins/`)\n- `Task` prompts that name a skill path",
-      "plugin-installed paths under `~/.claude/plugins/`)\n- `Agent` prompts that name a skill path",
+      "plugin-installed paths under `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/`)\n- `Agent` prompts that name a skill path",
     ],
     [
       "skills/show-me-your-work/SKILL.md",
       "Read this run's transcript under the active workspace's `agent-transcripts/` directory (the system prompt names the path). Don't glob across `~/.cursor/projects/*/`.",
-      "Read this run's transcript under Claude Code's per-project transcripts directory at `~/.claude/projects/<encoded-cwd>/`. Don't glob across `~/.claude/projects/`.",
+      "Read this run's transcript under Claude Code's per-project transcripts directory at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<encoded-cwd>/`. Don't glob across `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/`.",
     ],
     [
       "skills/poteto-mode/playbooks/eval.md",
       "Read each candidate's local transcript under the active workspace's `agent-transcripts/` directory (the system prompt names this path).",
-      "Read each candidate's local transcript under Claude Code's per-project transcripts directory at `~/.claude/projects/<encoded-cwd>/`.",
+      "Read each candidate's local transcript under Claude Code's per-project transcripts directory at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<encoded-cwd>/`.",
     ],
     [
       "skills/poteto-mode/playbooks/multi-phase-plan.md",
@@ -256,7 +282,7 @@ describe("applySubstitutions", () => {
     [
       "agents/poteto-agent.md",
       "search `~/.cursor/plugins/` for a file whose path ends in `skills/poteto-mode/SKILL.md`. If more than one file matches, use the copy whose `.cursor-plugin/plugin.json` has the highest `version`.",
-      "search `~/.claude/plugins/` for a file whose path ends in `skills/poteto-mode/SKILL.md`. If more than one file matches, use the copy whose `.claude-plugin/plugin.json` has the highest `version`.",
+      "search `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/` for a file whose path ends in `skills/poteto-mode/SKILL.md`. If more than one file matches, use the copy whose `.claude-plugin/plugin.json` has the highest `version`.",
     ],
   ])("%s: an upstream sentence takes the port's one form", (rel, upstream, port) => {
     const { text } = applySubstitutions(upstream, RULES.substitutions, rel);

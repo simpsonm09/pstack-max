@@ -152,6 +152,13 @@ describe("parseModels", () => {
     expect(parse((p) => delete p.codex.strongest)).toThrow('models.json: codex has no example for tier "strongest"');
     expect(parse((p) => (p.codex.fastest = "gpt"))).toThrow('models.json: codex names "fastest", which is not a tier');
   });
+
+  test("a muse block that misses or adds a tier throws naming the tier", () => {
+    expect(parse((p) => delete p.muse)).toThrow('models.json: "muse" must be an object');
+    expect(parse((p) => delete p.muse.worker)).toThrow('models.json: muse has no example for tier "worker"');
+    expect(parse((p) => (p.muse.fastest = "muse-spark"))).toThrow('models.json: muse names "fastest", which is not a tier');
+    expect(parse((p) => (p.muse.panel = ["a", "a"]))).toThrow('models.json: muse "panel" lists "a" twice');
+  });
 });
 
 describe("role labels reach the prose", () => {
