@@ -227,6 +227,7 @@ describe.skipIf(process.platform !== "win32" && !required)("Windows Copilot Sess
           USERPROFILE: fixture.home,
           COPILOT_PLUGIN_ROOT: fixture.plugin,
           COPILOT_HOME: fixture.home,
+          PSTACK_HOOK_DEBUG: "1", // TEMPORARY CI DIAGNOSTICS
         };
         for (const name of ["TEMP", "TMP", "LOCALAPPDATA", "APPDATA", "ProgramData", "PSModulePath"]) {
           if (process.env[name] !== undefined) env[name] = process.env[name];
