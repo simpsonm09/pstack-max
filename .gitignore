@@ -19,3 +19,8 @@ plugins/pstack/skills/poteto-mode/scripts/node_modules/
 
 # Lake build output for the Lean models
 /lean/.lake/
+
+# Local environment (real .env files stay local and are never committed)
+.env
+.env.*
+!.env.example
