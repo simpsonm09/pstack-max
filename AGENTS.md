@@ -15,6 +15,27 @@ the declared forks in `tools/forks.json`.
 - `CHANGES.md`, `VERSION`: the release record and the canonical plugin version.
 - `LICENSE`, `LICENSE-*`, `NOTICE*`: upstream licenses. Never edit or remove them.
 - `docs/exceptions.md`: rules this fork cannot meet, with reasons and revisit dates.
+- `lefthook.yml`: fork-local. Loads the shared hook jobs from `simpsonm09/.github` at `hooks-v2`
+  and adds the fork's `generate` pre-commit job. See "Git hooks" below.
+
+## Git hooks
+
+The fork's hooks are Lefthook 2.2.2, loaded from `simpsonm09/.github` at the annotated tag
+`hooks-v2` (`hooks/core.yml` and `hooks/owner.yml`). `just hooks` installs the shims and asserts
+that `lefthook dump` contains the `core-*` and `owner-*` jobs.
+
+Fork-local files that upstream sync must not overwrite or adopt:
+
+- `lefthook.yml`, the hook recipes in `justfile`, the Lefthook and gitleaks pins in `mise.toml`,
+  and `scripts/git-hook.ts`, `scripts/forbidden-files.ts`, `scripts/commit-msg.ts` and
+  `scripts/deps-refresh.ts`.
+- The `hooks` job in `.github/workflows/ci.yml`. Upstream owns the rest of that file and of
+  `security.yml`; a sync that rewrites `ci.yml` must keep the `hooks` job, and a conflict there is
+  resolved by keeping both upstream's jobs and this one.
+
+The upstream-owned `.pre-commit-config.yaml` stays as upstream ships it. Do not run `prek install`
+or `pre-commit install` in this clone: either would replace the Lefthook shims. The Lefthook
+`generate` job runs the same `bun tools/generate.mjs --check` check before each commit.
 
 ## Commands
 
@@ -25,7 +46,8 @@ the declared forks in `tools/forks.json`.
 - `just typecheck` type-checks the vendored tooling; `just test` runs `bun test tests/`.
 - `just check` is the local gate: `fmt-check`, `generate`, `lint`, `typecheck`, `test` and
   `agent-files`.
-- `just hooks` installs `.githooks/pre-push` for this clone only.
+- `just hooks` installs the shared Lefthook hooks into `.git/hooks` for every worktree of this
+  clone; it migrates only an old `.githooks` path and never changes global Git settings.
 
 ## Fork rules
 
@@ -44,9 +66,10 @@ the declared forks in `tools/forks.json`.
 
 ## Deliberate limits of this fork
 
-- **Upstream CI is unchanged.** `.github/workflows/ci.yml` and `security.yml` are upstream-owned and
-  keep their Bun 1.3.14 pin, Windows/macOS jobs and Docker-based linters. Changing them would
-  conflict on every sync. `just` mirrors the Linux checks that run locally.
+- **Upstream CI is mostly unchanged.** `.github/workflows/ci.yml` and `security.yml` are
+  upstream-owned and keep their Bun 1.3.14 pin, Windows/macOS jobs and Docker-based linters.
+  The fork adds only the `hooks` job to `ci.yml`; changing anything else there would conflict on
+  every sync. `just` mirrors the Linux checks that run locally.
 - **`just check` is not the whole CI.** The Windows and macOS jobs, the Pi extension typecheck
   (needs the global Pi package), `markdownlint`, `lychee`, the OSV scan and the skills-only install
   run only in CI.
@@ -59,6 +82,8 @@ the declared forks in `tools/forks.json`.
 
 - Push to `main`. It is a public repository with the `protect-main` ruleset: work on a branch and
   merge a pull request.
+- Skip hooks (C7.11): never set `LEFTHOOK=0`, never pass `--no-verify`, and never add a
+  `lefthook-local.yml`. Hooks are advisory for humans; the ruleset and CI are the enforcement.
 - Change GitHub settings, repository visibility or access from a workflow, script or agent run.
 - Edit a generated file, a license file or an upstream-owned file by hand.
 - Add a fork without a `tools/forks.json` entry, or remove an upstream file because a sync is noisy.

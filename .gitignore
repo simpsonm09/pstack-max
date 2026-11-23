@@ -24,3 +24,6 @@ plugins/pstack/skills/poteto-mode/scripts/node_modules/
 .env
 .env.*
 !.env.example
+
+# Local Lefthook overrides; never commit (C7.8).
+lefthook-local.yml
