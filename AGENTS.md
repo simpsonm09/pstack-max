@@ -29,9 +29,11 @@ Fork-local files that upstream sync must not overwrite or adopt:
 - `lefthook.yml`, the hook recipes in `justfile`, the Lefthook and gitleaks pins in `mise.toml`,
   and `scripts/git-hook.ts`, `scripts/forbidden-files.ts`, `scripts/commit-msg.ts` and
   `scripts/deps-refresh.ts`.
-- The `hooks` job in `.github/workflows/ci.yml`. Upstream owns the rest of that file and of
-  `security.yml`; a sync that rewrites `ci.yml` must keep the `hooks` job, and a conflict there is
-  resolved by keeping both upstream's jobs and this one.
+- The `hooks` job in `.github/workflows/ci.yml`, and the absence of the `windows-hooks`,
+  `windows-worktree-audit` and `macos-worktree-audit` jobs there. Upstream owns the rest of that
+  file and of `security.yml`; a sync that rewrites `ci.yml` must keep the `hooks` job and drop
+  those three non-Linux jobs again, and a conflict there is resolved by keeping upstream's Linux
+  jobs, the fork's `hooks` job and no macOS or Windows job.
 
 The upstream-owned `.pre-commit-config.yaml` stays as upstream ships it. Do not run `prek install`
 or `pre-commit install` in this clone: either would replace the Lefthook shims. The Lefthook
@@ -63,16 +65,21 @@ or `pre-commit install` in this clone: either would replace the Lefthook shims. 
 - **Declare forks.** A deliberate departure from upstream needs an entry in `tools/forks.json` with
   a `kind`, a `why` and a `since`. Generated files are written by `tools/generate.mjs`, never by
   hand.
+- **Linux-only CI (C5.6).** Every development machine is Linux, so this fork's CI runs Linux jobs
+  only. `.github/workflows/ci.yml` keeps upstream's Linux jobs, drops the macOS worktree audit,
+  the Windows worktree audit and the Windows session hooks jobs, and adds the fork's `hooks` job.
+  An upstream sync that restores `ci.yml` must drop those three jobs again before the sync pull
+  request merges. Upstream's Windows and macOS code stays untouched; only the fork's CI changes.
 
 ## Deliberate limits of this fork
 
-- **Upstream CI is mostly unchanged.** `.github/workflows/ci.yml` and `security.yml` are
-  upstream-owned and keep their Bun 1.3.14 pin, Windows/macOS jobs and Docker-based linters.
-  The fork adds only the `hooks` job to `ci.yml`; changing anything else there would conflict on
-  every sync. `just` mirrors the Linux checks that run locally.
-- **`just check` is not the whole CI.** The Windows and macOS jobs, the Pi extension typecheck
-  (needs the global Pi package), `markdownlint`, `lychee`, the OSV scan and the skills-only install
-  run only in CI.
+- **Upstream CI is Linux-only here.** `.github/workflows/ci.yml` and `security.yml` are
+  upstream-owned and keep their Bun 1.3.14 pin and Docker-based linters. The fork adds the `hooks`
+  job to `ci.yml` and removes the macOS worktree audit, the Windows worktree audit and the Windows
+  session hooks jobs, so every job runs on `ubuntu-latest` (C5.6). Those removals must be repeated
+  on every upstream sync. `just` mirrors the Linux checks that run locally.
+- **`just check` is not the whole CI.** The Pi extension typecheck (needs the global Pi package),
+  `markdownlint`, `lychee`, the OSV scan and the skills-only install run only in CI.
 - **Dependency automation covers `github-actions` only.** The vendored
   `plugins/pstack/skills/poteto-mode/scripts/package.json` is upstream-owned and pins `latest`; a
   Dependabot entry for it would fight the sync boundary. The exception is recorded in
