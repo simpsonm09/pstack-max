@@ -3,7 +3,7 @@
 # go here under names that never start with `core-` or `owner-`.
 remotes:
   - git_url: https://github.com/simpsonm09/.github
-    ref: hooks-v2
+    ref: hooks-v3
     configs:
       - hooks/core.yml
       - hooks/owner.yml

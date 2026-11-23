@@ -272,7 +272,7 @@ jobs:
         run: bun test --timeout 30000 tests/worktree-audit.test.mjs
 
   # Fork-local. Not upstream's: it proves the shared hook config loads from
-  # simpsonm09/.github at hooks-v2. A sync that rewrites ci.yml keeps this job.
+  # simpsonm09/.github at hooks-v3. A sync that rewrites ci.yml keeps this job.
   hooks:
     name: hooks
     runs-on: ubuntu-latest

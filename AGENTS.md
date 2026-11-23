@@ -15,13 +15,13 @@ the declared forks in `tools/forks.json`.
 - `CHANGES.md`, `VERSION`: the release record and the canonical plugin version.
 - `LICENSE`, `LICENSE-*`, `NOTICE*`: upstream licenses. Never edit or remove them.
 - `docs/exceptions.md`: rules this fork cannot meet, with reasons and revisit dates.
-- `lefthook.yml`: fork-local. Loads the shared hook jobs from `simpsonm09/.github` at `hooks-v2`
+- `lefthook.yml`: fork-local. Loads the shared hook jobs from `simpsonm09/.github` at `hooks-v3`
   and adds the fork's `generate` pre-commit job. See "Git hooks" below.
 
 ## Git hooks
 
 The fork's hooks are Lefthook 2.2.2, loaded from `simpsonm09/.github` at the annotated tag
-`hooks-v2` (`hooks/core.yml` and `hooks/owner.yml`). `just hooks` installs the shims and asserts
+`hooks-v3` (`hooks/core.yml` and `hooks/owner.yml`). `just hooks` installs the shims and asserts
 that `lefthook dump` contains the `core-*` and `owner-*` jobs.
 
 Fork-local files that upstream sync must not overwrite or adopt:
