@@ -270,3 +270,33 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Test the worktree audit
         run: bun test --timeout 30000 tests/worktree-audit.test.mjs
+
+  # Fork-local. Not upstream's: it proves the shared hook config loads from
+  # simpsonm09/.github at hooks-v2. A sync that rewrites ci.yml keeps this job.
+  hooks:
+    name: hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned tools from mise.toml
+        uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+        with:
+          cache: true
+
+      - name: Install the shared hook shims
+        run: lefthook install
+
+      - name: Assert the shared hook jobs loaded
+        shell: bash
+        run: |
+          dump=$(lefthook dump)
+          grep -q 'name: core-' <<<"$dump"
+          grep -q 'name: owner-' <<<"$dump"
+
+      - name: Validate the hook configuration
+        run: lefthook validate

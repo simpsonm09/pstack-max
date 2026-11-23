@@ -1,0 +1,17 @@
+# Lefthook dispatcher (core.md C7.8). Policy lives in the `just` recipes from
+# the C7.10 contract; this file only loads the shared configs. Repository jobs
+# go here under names that never start with `core-` or `owner-`.
+remotes:
+  - git_url: https://github.com/simpsonm09/.github
+    ref: hooks-v2
+    configs:
+      - hooks/core.yml
+      - hooks/owner.yml
+
+pre-commit:
+  jobs:
+    # The check upstream's CI "Generated files current" job runs, moved to the
+    # commit. It reads the working tree, not the index.
+    - name: generate
+      run: just generate
+      fail_text: "Generated files or plugin invariants are stale; run `just generate` and stage the output."
