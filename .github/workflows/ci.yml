@@ -258,3 +258,12 @@ jobs:
 
       - name: Validate the hook configuration
         run: lefthook validate
+
+      # The required checks are the recipes the hooks run (C5.7). These four
+      # only ever run from a hook, so this job is where CI confirms them.
+      - name: Confirm the hook recipes
+        run: |
+          just agent-files
+          git ls-files -z | xargs -0 -r just forbidden-files
+          just workflows
+          git ls-files -z -- '*.sh' '*.bash' | xargs -0 -r just shellcheck
