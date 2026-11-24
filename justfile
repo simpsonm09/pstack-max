@@ -127,9 +127,12 @@ signing-check:
 hook-pre-push:
     mise exec -- bun scripts/git-hook.ts pre-push
 
-# Fast subset for pre-push (C7.10): generated files and plugin invariants.
+# Fast subset for pre-push (C7.10): generated files and plugin invariants,
+# the shell scripts and the workflows, all well under 30 seconds.
 pre-push-check:
     just generate
+    just lint-shell
+    just lint-workflows
 
 # Refresh the pinned tools when mise.toml changed (post-checkout, post-merge).
 deps-refresh:
